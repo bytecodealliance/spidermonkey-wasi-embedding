@@ -1,0 +1,7 @@
+/gecko-dev
+/obj-dir
+/include
+/lib
+/dist
+.DS_Store
+.vscode
