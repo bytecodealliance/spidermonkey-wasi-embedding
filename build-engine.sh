@@ -1,3 +1,4 @@
+#!/bin/bash
 set -ex
 
 if [[ ! -a gecko-dev ]]
