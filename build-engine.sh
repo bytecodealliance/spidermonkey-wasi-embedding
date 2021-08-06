@@ -6,7 +6,9 @@ then
   # Ensure apt-get is current, because otherwise bootstrapping might fail
   sudo apt-get update -y
 
-  # Ensure Rust can compile to WASI
+  # Ensure the Rust version matches that used by Gecko, and can compile to WASI
+  rustup update 1.54.0
+  rustup default 1.54.0
   rustup target add wasm32-wasi
 
   # Clone Gecko repository at the required revision
