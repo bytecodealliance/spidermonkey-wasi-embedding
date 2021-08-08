@@ -1,5 +1,6 @@
 memory/build/Unified_cpp_memory_build0.o
 memory/mozalloc/Unified_cpp_memory_mozalloc0.o
+memory/mozalloc/mozalloc_abort.o
 mozglue/misc/AutoProfilerLabel.o
 mozglue/misc/ConditionVariable_noop.o
 mozglue/misc/MmapFaultHandler.o
@@ -16,7 +17,3 @@ mfbt/lz4hc.o
 mfbt/xxhash.o
 mfbt/Unified_cpp_mfbt0.o
 mfbt/Unified_cpp_mfbt1.o
-modules/zlib/src/compress.o
-modules/zlib/src/gzclose.o
-modules/zlib/src/infback.o
-modules/zlib/src/uncompr.o
