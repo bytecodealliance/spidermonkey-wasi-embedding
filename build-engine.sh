@@ -20,13 +20,16 @@ then
   cd gecko-dev
 
   git init
-  git remote add -f origin $(cat $script_dir/gecko-repository)
+  git remote add --no-tags -t wasi-embedding origin $(cat $script_dir/gecko-repository)
   cd ..
 fi
 
 cd gecko-dev
 git fetch --depth 1 origin $(cat $script_dir/gecko-revision)
 git checkout FETCH_HEAD
+
+# Ensure apt is updated
+sudo apt-get update -y
 
 # Use Gecko's build system bootstrapping to ensure all dependencies are installed
 ./mach bootstrap --application-choice=js
