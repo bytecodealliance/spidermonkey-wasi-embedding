@@ -8,8 +8,8 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 sudo apt-get update -y
 
 # Ensure the Rust version matches that used by Gecko, and can compile to WASI
-rustup update 1.55.0
-rustup default 1.55.0
+rustup update 1.57.0
+rustup default 1.57.0
 rustup target add wasm32-wasi
 
 if [[ ! -a gecko-dev ]]
@@ -33,7 +33,7 @@ git checkout FETCH_HEAD
 
 # ... except, that doesn't install the wasi-sysroot, which we need, so we do that manually.
 cd ~/.mozbuild
-_virtualenvs/mach/bin/python \
+python3 \
   ${working_dir}/gecko-dev/mach \
   artifact \
   toolchain \
