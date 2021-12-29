@@ -43,24 +43,27 @@ python3 \
 
 cd ${working_dir}
 
+mode="release"
 flags="--optimize --no-debug --build-only"
-rust_lib_dir="release"
 if [[ $1 == 'debug' ]]
 then
+  mode="debug"
   flags="--optimize --debug"
-  rust_lib_dir="debug"
 fi
+rust_lib_dir=$mode
+objdir=obj-$mode
+outdir=$mode
 
 echo $flags $rust_lib_dir
 
 # Build SpiderMonkey for WASI
-MOZ_FETCHES_DIR=~/.mozbuild CC=~/.mozbuild/clang/bin/clang gecko-dev/js/src/devtools/automation/autospider.py --objdir=obj $flags wasi
+MOZ_FETCHES_DIR=~/.mozbuild CC=~/.mozbuild/clang/bin/clang gecko-dev/js/src/devtools/automation/autospider.py --objdir=$objdir $flags wasi
 
 # Copy header, object, and static lib files
-rm -rf lib include
-mkdir lib
+rm -rf $outdir
+mkdir -p $outdir/lib
 
-cd obj
-cp -Lr dist/include ..
-cp $(cat $script_dir/object-files.list) ../lib
-cp js/src/build/libjs_static.a wasm32-wasi/${rust_lib_dir}/libjsrust.a ../lib
+cd $objdir
+cp -Lr dist/include ../$outdir
+cp $(cat $script_dir/object-files.list) ../$outdir/lib
+cp js/src/build/libjs_static.a wasm32-wasi/${rust_lib_dir}/libjsrust.a ../$outdir/lib

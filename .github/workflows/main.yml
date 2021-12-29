@@ -31,10 +31,10 @@ jobs:
       run: |
         mkdir dist
         bash ./build-engine.sh release
-        tar -a -cf dist/spidermonkey-wasm-static-lib_release.tar.gz include lib
-        rm -rf include lib obj
+        tar -a -cf dist/spidermonkey-wasm-static-lib_release.tar.gz release
+        rm -rf release obj-release
         bash ./build-engine.sh debug
-        tar -a -cf dist/spidermonkey-wasm-static-lib_debug.tar.gz include lib
+        tar -a -cf dist/spidermonkey-wasm-static-lib_debug.tar.gz debug
 
     - name: Calculate tag name
       run: |
