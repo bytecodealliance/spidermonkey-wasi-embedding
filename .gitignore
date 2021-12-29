@@ -1,7 +1,8 @@
 /gecko-dev
-/obj-dir
-/include
-/lib
+/obj-release
+/obj-debug
+/release
+/debug
 /dist
 .DS_Store
 .vscode
