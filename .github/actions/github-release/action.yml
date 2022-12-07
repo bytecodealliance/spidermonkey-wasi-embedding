@@ -1,4 +1,5 @@
-name: 'SpiderMonkey WASI github release'
+name: 'wasmtime github releases'
+description: 'wasmtime github releases'
 inputs:
   token:
     description: ''
@@ -10,5 +11,5 @@ inputs:
     description: ''
     required: true
 runs:
-  using: 'docker'
-  image: 'Dockerfile'
+  using: 'node16'
+  main: 'main.js'

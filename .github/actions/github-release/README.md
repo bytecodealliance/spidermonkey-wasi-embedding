@@ -4,8 +4,6 @@ An action used to publish GitHub releases for `wasmtime`.
 
 As of the time of this writing there's a few actions floating around which
 perform github releases but they all tend to have their set of drawbacks.
-Additionally nothing handles deleting releases which we need for our rolling
-`dev` release.
 
 To handle all this this action rolls-its-own implementation using the
 actions/toolkit repository and packages published there. These run in a Docker
