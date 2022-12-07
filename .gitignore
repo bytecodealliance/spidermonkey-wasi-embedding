@@ -4,5 +4,6 @@
 /release
 /debug
 /dist
+/mozconfig-*
 .DS_Store
 .vscode

@@ -30,6 +30,7 @@ jobs:
       if: steps.sm-cache.outputs.cache-hit != 'true'
       run: |
         mkdir dist
+        sudo apt-get update -y
         bash ./build-engine.sh release
         tar -a -cf dist/spidermonkey-wasm-static-lib_release.tar.gz release
         rm -rf release obj-release
