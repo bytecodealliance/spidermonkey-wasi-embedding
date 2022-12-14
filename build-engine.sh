@@ -15,7 +15,6 @@ cat << EOF > "$mozconfig"
 ac_add_options --enable-project=js
 ac_add_options --enable-application=js
 ac_add_options --target=wasm32-unknown-wasi
-ac_add_options --disable-stdcxx-compat
 ac_add_options --without-system-zlib
 ac_add_options --without-intl-api
 ac_add_options --disable-jit
@@ -29,6 +28,22 @@ ac_add_options --enable-js-streams
 ac_add_options --prefix=${working_dir}/${objdir}/dist
 mk_add_options MOZ_OBJDIR=${working_dir}/${objdir}
 EOF
+
+target="$(uname)"
+case "$target" in
+  Linux)
+    echo "ac_add_options --disable-stdcxx-compat" >> "$mozconfig"
+    ;;
+
+  Darwin)
+    echo "ac_add_options --host=aarch64-apple-darwin" >> "$mozconfig"
+    ;;
+
+  *)
+    echo "Unsupported build target: $target"
+    exit 1
+    ;;
+esac
 
 case "$mode" in
   release)
