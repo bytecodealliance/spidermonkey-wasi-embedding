@@ -27,6 +27,7 @@ ac_add_options --enable-optimize
 ac_add_options --enable-js-streams
 ac_add_options --prefix=${working_dir}/${objdir}/dist
 mk_add_options MOZ_OBJDIR=${working_dir}/${objdir}
+mk_add_options AUTOCLOBBER=1
 EOF
 
 target="$(uname)"
