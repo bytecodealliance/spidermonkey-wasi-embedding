@@ -65,6 +65,8 @@ esac
 MOZCONFIG="${mozconfig}" \
 MOZ_FETCHES_DIR=~/.mozbuild \
 CC=~/.mozbuild/clang/bin/clang \
+CXX=~/.mozbuild/clang/bin/clang++ \
+AR=~/.mozbuild/clang/bin/llvm-ar \
   python3 "${working_dir}/gecko-dev/mach" \
   --no-interactive \
     build
