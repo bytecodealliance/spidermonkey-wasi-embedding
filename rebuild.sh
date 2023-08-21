@@ -25,6 +25,7 @@ ac_add_options --disable-clang-plugin
 ac_add_options --enable-jitspew
 ac_add_options --enable-optimize
 ac_add_options --enable-js-streams
+ac_add_options --enable-portable-baseline-interp
 ac_add_options --prefix=${working_dir}/${objdir}/dist
 mk_add_options MOZ_OBJDIR=${working_dir}/${objdir}
 mk_add_options AUTOCLOBBER=1
@@ -65,6 +66,8 @@ esac
 MOZCONFIG="${mozconfig}" \
 MOZ_FETCHES_DIR=~/.mozbuild \
 CC=~/.mozbuild/clang/bin/clang \
+CXX=~/.mozbuild/clang/bin/clang++ \
+AR=~/.mozbuild/clang/bin/llvm-ar \
   python3 "${working_dir}/gecko-dev/mach" \
   --no-interactive \
     build
