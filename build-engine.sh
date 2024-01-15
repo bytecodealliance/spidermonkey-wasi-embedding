@@ -29,6 +29,11 @@ ac_add_options --enable-portable-baseline-interp
 ac_add_options --prefix=${working_dir}/${objdir}/dist
 mk_add_options MOZ_OBJDIR=${working_dir}/${objdir}
 mk_add_options AUTOCLOBBER=1
+export RUSTFLAGS="-C relocation-model=pic"
+export RUSTC_BOOTSTRAP=1
+export CFLAGS="-fPIC"
+export CXXFLAGS="-fPIC"
+
 EOF
 
 target="$(uname)"
@@ -104,6 +109,15 @@ python3 \
   sysroot-wasm32-wasi
 
 cd "$working_dir"
+
+if [[ -z "${WASI_SDK_PREFIX}" ]]; then
+  echo "WASI_SDK_PREFIX not set, using default compiler and sysroot"
+else
+  mv ~/.mozbuild/clang ~/.mozbuild/clang.orig
+  mv ~/.mozbuild/sysroot-wasm32-wasi ~/.mozbuild/sysroot-wasm32-wasi.orig
+  ln -s "${WASI_SDK_PREFIX}" ~/.mozbuild/clang
+  ln -s "${WASI_SDK_PREFIX}/share/wasi-sysroot" ~/.mozbuild/sysroot-wasm32-wasi
+fi
 
 # Build SpiderMonkey for WASI
 MOZCONFIG="${mozconfig}" \
