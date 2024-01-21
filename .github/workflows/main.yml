@@ -31,9 +31,6 @@ jobs:
       run: |
         mkdir dist
         sudo apt-get update -y
-        wget --no-verbose https://github.com/dicej/wasi-sdk/releases/download/filesystem-fix-v3/wasi-sdk-20.25g964191c91aac-linux.tar.gz
-        tar -xf wasi-sdk-20.25g964191c91aac-linux.tar.gz
-        export WASI_SDK_PREFIX=$PWD/wasi-sdk-20.25g964191c91aac
         bash ./build-engine.sh release
         tar -a -cf dist/spidermonkey-wasm-static-lib_release.tar.gz release
         rm -rf release obj-release
