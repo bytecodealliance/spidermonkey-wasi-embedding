@@ -1,0 +1,3 @@
+[submodule "gecko-dev"]
+	path = gecko-dev
+	url = git@github.com:bytecodealliance/gecko-dev

@@ -25,7 +25,12 @@ ac_add_options --disable-clang-plugin
 ac_add_options --enable-jitspew
 ac_add_options --enable-optimize=-O3
 ac_add_options --enable-js-streams
+ac_add_options --disable-shared-memory
+ac_add_options --wasm-no-experimental
+ac_add_options --disable-wasm-extended-const
+ac_add_options --disable-js-shell
 ac_add_options --enable-portable-baseline-interp
+ac_add_options --disable-cargo-incremental
 ac_add_options --prefix=${working_dir}/${objdir}/dist
 mk_add_options MOZ_OBJDIR=${working_dir}/${objdir}
 mk_add_options AUTOCLOBBER=1
@@ -47,43 +52,31 @@ case "$target" in
     ;;
 esac
 
-case "$mode" in
-  release)
-    echo "ac_add_options --disable-debug" >> "$mozconfig"
-    ;;
-
-  debug)
-    echo "ac_add_options --enable-debug" >> "$mozconfig"
-    ;;
-
-  *)
-    echo "Unknown build type: $mode"
-    exit 1
-    ;;
-esac
-
-
-# Ensure the Rust version matches that used by Gecko, and can compile to WASI
-rustup target add wasm32-wasi
-
-fetch_commits=
-if [[ ! -a gecko-dev ]]; then
-
-  # Clone Gecko repository at the required revision
-  mkdir gecko-dev
-
-  git -C gecko-dev init
-  git -C gecko-dev remote add --no-tags -t wasi-embedding \
-    origin "$(cat "$script_dir/gecko-repository")"
-
-  fetch_commits=1
+if [[ "$mode" == "release" ]]; then
+cat << EOF >> "$mozconfig"
+ac_add_options --enable-strip
+ac_add_options --disable-debug
+EOF
+else
+cat << EOF >> "$mozconfig"
+ac_add_options --enable-debug
+EOF
 fi
 
-target_rev="$(cat "$script_dir/gecko-revision")"
-if [[ -n "$fetch_commits" ]] || \
-  [[ "$(git -C gecko-dev rev-parse HEAD)" != "$target_rev" ]]; then
-  git -C gecko-dev fetch --depth 1 origin "$target_rev"
-  git -C gecko-dev checkout FETCH_HEAD
+cat << EOF >> "$mozconfig"
+export CARGOFLAGS="-Z build-std=panic_abort,std"
+EOF
+
+# Ensure the Rust version matches that used by Gecko, and can compile to WASI
+rustc_valid=
+if command -v rustc > /dev/null && command -v cargo > /dev/null; then
+  if rustc --print target-list | grep -q '^wasm32-wasi$'; then
+    rustc_valid=1
+  fi
+fi
+
+if [ -z "$rustc_valid" ]; then
+  rustup target add wasm32-wasi
 fi
 
 # Use Gecko's build system bootstrapping to ensure all dependencies are
@@ -126,4 +119,8 @@ while read -r file; do
   cp "$file" "../$outdir/lib"
 done < "$script_dir/object-files.list"
 
-cp js/src/build/libjs_static.a "wasm32-wasi/${mode}/libjsrust.a" "../$outdir/lib"
+cp js/src/build/libjs_static.a "../$outdir/lib"
+
+if [[ -f "wasm32-wasi/${mode}/libjsrust.a" ]]; then
+cp "wasm32-wasi/${mode}/libjsrust.a" "../$outdir/lib"
+fi
