@@ -7,9 +7,13 @@ working_dir="$(pwd)"
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 mode="${1:-release}"
-mozconfig="${working_dir}/mozconfig-${mode}"
-objdir="obj-$mode"
-outdir="$mode"
+weval=""
+if [[ $# > 1 ]] && [[ "$2" == "weval" ]]; then
+    weval=-weval
+fi
+mozconfig="${working_dir}/mozconfig-${mode}${weval}"
+objdir="obj-$mode${weval}"
+outdir="$mode${weval}"
 rebuild="${REBUILD_ENGINE:-0}"
 
 cat << EOF > "$mozconfig"
@@ -60,6 +64,15 @@ case "$mode" in
   *)
     echo "Unknown build type: $mode"
     exit 1
+    ;;
+esac
+
+case "$weval" in
+  -weval)
+    echo "ac_add_options --enable-portable-baseline-interp-force" >> "$mozconfig"
+    echo "ac_add_options --enable-aot-ics" >> "$mozconfig"
+    echo "ac_add_options --enable-aot-ics-force" >> "$mozconfig"
+    echo "ac_add_options --enable-pbl-weval" >> "$mozconfig"
     ;;
 esac
 

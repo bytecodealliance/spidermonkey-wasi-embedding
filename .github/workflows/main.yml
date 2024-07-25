@@ -31,11 +31,22 @@ jobs:
       run: |
         mkdir dist
         sudo apt-get update -y
+
         bash ./build-engine.sh release
         tar -a -cf dist/spidermonkey-wasm-static-lib_release.tar.gz release
         rm -rf release obj-release
+
+        bash ./build-engine.sh release weval
+        tar -a -cf dist/spidermonkey-wasm-static-lib_release_weval.tar.gz release-weval
+        rm -rf release-weval obj-release-weval
+
         bash ./build-engine.sh debug
         tar -a -cf dist/spidermonkey-wasm-static-lib_debug.tar.gz debug
+        rm -rf debug obj-debug
+
+        bash ./build-engine.sh debug weval
+        tar -a -cf dist/spidermonkey-wasm-static-lib_debug_weval.tar.gz debug-weval
+        rm -rf debug-weval obj-debug-weval
 
     - name: Calculate tag name
       run: |
