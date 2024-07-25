@@ -10,6 +10,7 @@ mode="${1:-release}"
 mozconfig="${working_dir}/mozconfig-${mode}"
 objdir="obj-$mode"
 outdir="$mode"
+rebuild="${REBUILD_ENGINE:-0}"
 
 cat << EOF > "$mozconfig"
 ac_add_options --enable-project=js
@@ -62,46 +63,50 @@ case "$mode" in
     ;;
 esac
 
+# For a full build (not a rebuild), we need to clone the repo and do some setup work.
+# `rebuild.sh` invokes this script with REBUILD_ENGINE=1 which sets rebuild=1
+# and skips this setup.
+if [[ $rebuild == 0 ]]; then
+    # Ensure the Rust version matches that used by Gecko, and can compile to WASI
+    rustup target add wasm32-wasi
 
-# Ensure the Rust version matches that used by Gecko, and can compile to WASI
-rustup target add wasm32-wasi
+    fetch_commits=
+    if [[ ! -a gecko-dev ]]; then
 
-fetch_commits=
-if [[ ! -a gecko-dev ]]; then
+      # Clone Gecko repository at the required revision
+      mkdir gecko-dev
 
-  # Clone Gecko repository at the required revision
-  mkdir gecko-dev
+      git -C gecko-dev init
+      git -C gecko-dev remote add --no-tags -t wasi-embedding \
+        origin "$(cat "$script_dir/gecko-repository")"
 
-  git -C gecko-dev init
-  git -C gecko-dev remote add --no-tags -t wasi-embedding \
-    origin "$(cat "$script_dir/gecko-repository")"
+      fetch_commits=1
+    fi
 
-  fetch_commits=1
+    target_rev="$(cat "$script_dir/gecko-revision")"
+    if [[ -n "$fetch_commits" ]] || \
+      [[ "$(git -C gecko-dev rev-parse HEAD)" != "$target_rev" ]]; then
+      git -C gecko-dev fetch --depth 1 origin "$target_rev"
+      git -C gecko-dev checkout FETCH_HEAD
+    fi
+
+    # Use Gecko's build system bootstrapping to ensure all dependencies are
+    # installed
+    cd gecko-dev
+    ./mach --no-interactive bootstrap --application-choice=js --no-system-changes
+
+    # ... except, that doesn't install the wasi-sysroot, which we need, so we do
+    # that manually.
+    cd ~/.mozbuild
+    python3 \
+      "${working_dir}/gecko-dev/mach" \
+      --no-interactive \
+      artifact \
+      toolchain \
+      --bootstrap \
+      --from-build \
+      sysroot-wasm32-wasi
 fi
-
-target_rev="$(cat "$script_dir/gecko-revision")"
-if [[ -n "$fetch_commits" ]] || \
-  [[ "$(git -C gecko-dev rev-parse HEAD)" != "$target_rev" ]]; then
-  git -C gecko-dev fetch --depth 1 origin "$target_rev"
-  git -C gecko-dev checkout FETCH_HEAD
-fi
-
-# Use Gecko's build system bootstrapping to ensure all dependencies are
-# installed
-cd gecko-dev
-./mach --no-interactive bootstrap --application-choice=js --no-system-changes
-
-# ... except, that doesn't install the wasi-sysroot, which we need, so we do
-# that manually.
-cd ~/.mozbuild
-python3 \
-  "${working_dir}/gecko-dev/mach" \
-  --no-interactive \
-  artifact \
-  toolchain \
-  --bootstrap \
-  --from-build \
-  sysroot-wasm32-wasi
 
 cd "$working_dir"
 
