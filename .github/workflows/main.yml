@@ -58,7 +58,7 @@ jobs:
     # Upload tarball as an artifact of the github action run, so the output
     # can be inspected for pull requests.
     - name: Upload tarball
-      uses: actions/upload-artifact@v1
+      uses: actions/upload-artifact@v4
       if: github.event_name != 'push' || (github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/v'))
       with:
         name: spidermonkey-wasm-static-lib.zip
