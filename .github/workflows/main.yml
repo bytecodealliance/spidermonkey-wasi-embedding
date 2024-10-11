@@ -44,10 +44,6 @@ jobs:
         tar -a -cf dist/spidermonkey-wasm-static-lib_debug.tar.gz debug
         rm -rf debug obj-debug
 
-        bash ./build-engine.sh debug weval
-        tar -a -cf dist/spidermonkey-wasm-static-lib_debug_weval.tar.gz debug-weval
-        rm -rf debug-weval obj-debug-weval
-
     - name: Calculate tag name
       run: |
         name=rev_$GITHUB_SHA
