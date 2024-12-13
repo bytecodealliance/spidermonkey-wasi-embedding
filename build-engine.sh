@@ -21,7 +21,6 @@ ac_add_options --enable-project=js
 ac_add_options --enable-application=js
 ac_add_options --target=wasm32-unknown-wasi
 ac_add_options --without-system-zlib
-ac_add_options --without-intl-api
 ac_add_options --disable-jit
 ac_add_options --disable-shared-js
 ac_add_options --disable-shared-memory
@@ -126,9 +125,9 @@ cd "$working_dir"
 # Build SpiderMonkey for WASI
 MOZCONFIG="${mozconfig}" \
 MOZ_FETCHES_DIR=~/.mozbuild \
-CC=~/.mozbuild/clang/bin/clang \
-CXX=~/.mozbuild/clang/bin/clang++ \
-AR=~/.mozbuild/clang/bin/llvm-ar \
+CC=~/Projects/llvm-project/build/bin/clang \
+CXX=~/Projects/llvm-project/build/bin/clang++ \
+AR=~/Projects/llvm-project/build/bin/llvm-ar \
   python3 "${working_dir}/gecko-dev/mach" \
   --no-interactive \
     build
