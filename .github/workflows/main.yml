@@ -95,7 +95,7 @@ jobs:
     - name: Calculate tag name
       run: |
         name=rev_$(cat gecko-revision)
-        echo ::set-output name=val::$name
+        echo val=$name >> $GITHUB_OUTPUT
         echo TAG=$name >> $GITHUB_ENV
       id: tagname
 
