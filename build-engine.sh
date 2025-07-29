@@ -3,22 +3,55 @@
 set -euo pipefail
 set -x
 
+# If WASI_SDK_PATH is set, use it to set up the compiler environment.
+if [[ -n "${WASI_SDK_PATH:-}" ]]; then
+  export CC="${WASI_SDK_PATH}/bin/clang"
+  export CXX="${WASI_SDK_PATH}/bin/clang++"
+  if [[ -z "${HOST_CC:-}" ]]; then
+    export HOST_CC=$(which clang)
+  fi
+  if [[ -z "${HOST_CXX:-}" ]]; then
+    export HOST_CXX=$(which clang++)
+  fi
+else
+  # Otherwise, check that all required environment variables are set.
+  if [[ -z "${WASI_SYSROOT:-}" ]]; then
+      echo "Error: WASI_SYSROOT environment variable is not set."
+      exit 1
+  fi
+  if [[ -z "${CC:-}" ]]; then
+      echo "Error: CC environment variable must be set to a clang that can target wasm32-wasip1."
+      exit 1
+  fi
+  if [[ -z "${CXX:-}" ]]; then
+      echo "Error: CXX environment variable must be set to a clang++ that can target wasm32-wasip1."
+      exit 1
+  fi
+  if [[ -z "${HOST_CC:-}" ]]; then
+      echo "Error: HOST_CC environment variable is not set."
+      exit 1
+  fi
+  if [[ -z "${HOST_CXX:-}" ]]; then
+      echo "Error: HOST_CXX environment variable is not set."
+      exit 1
+  fi
+fi
+
 working_dir="$(pwd)"
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 mode="${1:-release}"
 weval=""
-if [[ $# > 1 ]] && [[ "$2" == "weval" ]]; then
+if [[ $# -gt 1 ]] && [[ "$2" == "weval" ]]; then
     weval=-weval
 fi
 mozconfig="${working_dir}/mozconfig-${mode}${weval}"
 objdir="obj-$mode${weval}"
 outdir="$mode${weval}"
-rebuild="${REBUILD_ENGINE:-0}"
 
 cat << EOF > "$mozconfig"
 ac_add_options --enable-project=js
-ac_add_options --enable-application=js
+ac_add_options --disable-js-shell # Prevents building Rust code, which we need to do ourselves anyway
 ac_add_options --target=wasm32-unknown-wasi
 ac_add_options --without-system-zlib
 ac_add_options --without-intl-api
@@ -36,14 +69,20 @@ mk_add_options MOZ_OBJDIR=${working_dir}/${objdir}
 mk_add_options AUTOCLOBBER=1
 EOF
 
+if [[ -n "${WASI_SYSROOT:-}" ]]; then
+    echo "ac_add_options --with-sysroot=\"${WASI_SYSROOT}\"" >> "$mozconfig"
+fi
+
 target="$(uname)"
 case "$target" in
   Linux)
     echo "ac_add_options --disable-stdcxx-compat" >> "$mozconfig"
+    platform="linux64-x64"
     ;;
 
   Darwin)
     echo "ac_add_options --host=aarch64-apple-darwin" >> "$mozconfig"
+    platform="macosx64-aarch64"
     ;;
 
   *)
@@ -76,59 +115,11 @@ case "$weval" in
     ;;
 esac
 
-# For a full build (not a rebuild), we need to clone the repo and do some setup work.
-# `rebuild.sh` invokes this script with REBUILD_ENGINE=1 which sets rebuild=1
-# and skips this setup.
-if [[ $rebuild == 0 ]]; then
-    # Ensure the Rust version matches that used by Gecko, and can compile to WASI
-    rustup target add wasm32-wasi
-
-    fetch_commits=
-    if [[ ! -a gecko-dev ]]; then
-
-      # Clone Gecko repository at the required revision
-      mkdir gecko-dev
-
-      git -C gecko-dev init
-      git -C gecko-dev remote add --no-tags -t wasi-embedding \
-        origin "$(cat "$script_dir/gecko-repository")"
-
-      fetch_commits=1
-    fi
-
-    target_rev="$(cat "$script_dir/gecko-revision")"
-    if [[ -n "$fetch_commits" ]] || \
-      [[ "$(git -C gecko-dev rev-parse HEAD)" != "$target_rev" ]]; then
-      git -C gecko-dev fetch --depth 1 origin "$target_rev"
-      git -C gecko-dev checkout FETCH_HEAD
-    fi
-
-    # Use Gecko's build system bootstrapping to ensure all dependencies are
-    # installed
-    cd gecko-dev
-    ./mach --no-interactive bootstrap --application-choice=js --no-system-changes
-
-    # ... except, that doesn't install the wasi-sysroot, which we need, so we do
-    # that manually.
-    cd ~/.mozbuild
-    python3 \
-      "${working_dir}/gecko-dev/mach" \
-      --no-interactive \
-      artifact \
-      toolchain \
-      --bootstrap \
-      --from-build \
-      sysroot-wasm32-wasi
-fi
-
 cd "$working_dir"
 
 # Build SpiderMonkey for WASI
 MOZCONFIG="${mozconfig}" \
 MOZ_FETCHES_DIR=~/.mozbuild \
-CC=~/.mozbuild/clang/bin/clang \
-CXX=~/.mozbuild/clang/bin/clang++ \
-AR=~/.mozbuild/clang/bin/llvm-ar \
   python3 "${working_dir}/gecko-dev/mach" \
   --no-interactive \
     build
@@ -144,4 +135,4 @@ while read -r file; do
   cp "$file" "../$outdir/lib"
 done < "$script_dir/object-files.list"
 
-cp js/src/build/libjs_static.a "wasm32-wasi/${mode}/libjsrust.a" "../$outdir/lib"
+cp js/src/build/libjs_static.a "../$outdir/lib"

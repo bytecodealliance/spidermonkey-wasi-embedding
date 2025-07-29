@@ -12,7 +12,9 @@ defaults:
 jobs:
   build_engine:
     name: Build Engine
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    env:
+      WASI_SDK_VERSION: 25
     steps:
     - uses: actions/checkout@v2
       with:
@@ -26,27 +28,77 @@ jobs:
           dist
         key: cache-${{ hashFiles('build-engine.sh') }}-${{ hashFiles('gecko-revision') }}-${{ hashFiles('object-files.list') }}
 
-    - name: "Build and bundle SpiderMonkey"
+    - name: Install dependencies
+      id: deps
       if: steps.sm-cache.outputs.cache-hit != 'true'
       run: |
-        mkdir dist
+        mkdir -p dist
         sudo apt-get update -y
+        
+        if ! command -v rustup &> /dev/null; then
+          echo "Rustup not found, installing..."
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+        fi
+        rustup target add wasm32-wasip1
+        
+        cargo install cbindgen
+        
+        # Download wasi-sdk
+        sdk_dir_name="wasi-sdk-${WASI_SDK_VERSION}.0-$(uname -m)-linux"
+        sdk_url=https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-${WASI_SDK_VERSION}/${sdk_dir_name}.tar.gz
+        curl --location --output wasi-sdk.tar.gz "${sdk_url}"
+        tar -xf wasi-sdk.tar.gz
 
-        bash ./build-engine.sh release
-        tar -a -cf dist/spidermonkey-wasm-static-lib_release.tar.gz release
-        rm -rf release obj-release
+    - name: Clone Gecko
+      id: clone-gecko
+      if: steps.sm-cache.outputs.cache-hit != 'true'
+      run: |
+        fetch_commits=
+        if [[ ! -a gecko-dev ]]; then
+        
+        # Clone Gecko repository at the required revision
+        mkdir gecko-dev
+        
+        git -C gecko-dev init
+        git -C gecko-dev remote add --no-tags \
+        origin "$(cat "gecko-repository")"
+        
+        fetch_commits=1
+        fi
+    
+        target_rev="$(cat "gecko-revision")"
+        if [[ -n "$fetch_commits" ]] || \
+        [[ "$(git -C gecko-dev rev-parse HEAD)" != "$target_rev" ]]; then
+        git -C gecko-dev fetch --depth 1 origin "$target_rev"
+        # Shallow fetching doesn't fetch tags, so we need to check if the target revision
+        # is a tag name and if so, create a local tag for it.
+        if ! git rev-parse --verify --quiet "$target_rev" > /dev/null; then
+          git tag "$target_rev" FETCH_HEAD
+        fi
+        git -C gecko-dev checkout FETCH_HEAD
+        fi
 
-        bash ./build-engine.sh release weval
-        tar -a -cf dist/spidermonkey-wasm-static-lib_release_weval.tar.gz release-weval
-        rm -rf release-weval obj-release-weval
+    - name: "Build and bundle SpiderMonkey"
+      id: build
+      if: steps.sm-cache.outputs.cache-hit != 'true'
+      run: |
+        export WASI_SDK_PATH=$(pwd)/wasi-sdk-${WASI_SDK_VERSION}.0-$(uname -m)-linux
 
         bash ./build-engine.sh debug
         tar -a -cf dist/spidermonkey-wasm-static-lib_debug.tar.gz debug
-        rm -rf debug obj-debug
+
+        bash ./build-engine.sh release
+        tar -a -cf dist/spidermonkey-wasm-static-lib_release.tar.gz release
+
+        # weval builds don't work for the time being.
+        # bash ./build-engine.sh release weval
+        # tar -a -cf dist/spidermonkey-wasm-static-lib_release_weval.tar.gz release-weval
+        # rm -rf release-weval obj-release-weval
 
     - name: Calculate tag name
       run: |
-        name=rev_$GITHUB_SHA
+        name=rev_$(cat gecko-revision)
         echo ::set-output name=val::$name
         echo TAG=$name >> $GITHUB_ENV
       id: tagname
