@@ -13,8 +13,12 @@ jobs:
   build_engine:
     name: Build Engine
     runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        build_type: [debug, release]
     env:
       WASI_SDK_VERSION: 25
+      BUILD_TYPE: ${{ matrix.build_type }}
     steps:
     - uses: actions/checkout@v2
       with:
@@ -26,7 +30,7 @@ jobs:
       with:
         path: |
           dist
-        key: cache-${{ hashFiles('build-engine.sh') }}-${{ hashFiles('gecko-revision') }}-${{ hashFiles('object-files.list') }}
+        key: cache-${{ matrix.build_type }}-${{ hashFiles('build-engine.sh') }}-${{ hashFiles('gecko-revision') }}-${{ hashFiles('object-files.list') }}
 
     - name: Install dependencies
       id: deps
@@ -85,16 +89,8 @@ jobs:
       run: |
         export WASI_SDK_PATH=$(pwd)/wasi-sdk-${WASI_SDK_VERSION}.0-$(uname -m)-linux
 
-        bash ./build-engine.sh debug
-        tar -a -cf dist/spidermonkey-wasm-static-lib_debug.tar.gz debug
-
-        bash ./build-engine.sh release
-        tar -a -cf dist/spidermonkey-wasm-static-lib_release.tar.gz release
-
-        # weval builds don't work for the time being.
-        # bash ./build-engine.sh release weval
-        # tar -a -cf dist/spidermonkey-wasm-static-lib_release_weval.tar.gz release-weval
-        # rm -rf release-weval obj-release-weval
+        bash ./build-engine.sh $BUILD_TYPE
+        tar -a -cf dist/spidermonkey-wasm-static-lib_${BUILD_TYPE}.tar.gz $BUILD_TYPE
 
     - name: Calculate tag name
       run: |
@@ -109,8 +105,8 @@ jobs:
       uses: actions/upload-artifact@v4
       if: github.event_name != 'push' || (github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/v'))
       with:
-        name: spidermonkey-wasm-static-lib.zip
-        path: dist/
+        name: spidermonkey-wasm-static-lib-${{ matrix.build_type }}.tar.gz
+        path: dist/spidermonkey-wasm-static-lib_${{ matrix.build_type }}.tar.gz
 
     # ... and if this was an actual push (tag or `main`) then we publish a
     # new release. This'll automatically publish a tag release or update `dev`
