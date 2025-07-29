@@ -130,6 +130,7 @@ mkdir -p "$outdir/lib"
 
 cd "$objdir"
 cp -Lr dist/include "../$outdir"
+cp js/src/js-confdefs.h "../$outdir/include/"
 
 while read -r file; do
   cp "$file" "../$outdir/lib"
